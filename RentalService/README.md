@@ -88,35 +88,171 @@ docker tag rentalservice <votre-username-dockerhub>/rentalservice:latest
 docker push <votre-username-dockerhub>/rentalservice:latest
 ```
 
-## Service PHP
+## Service PHP - RESTful Task API
 
-Le service PHP se trouve dans le dossier `php-service` et retourne un prénom via une requête HTTP GET.
+Le service PHP est une API RESTful complète de gestion de tâches avec opérations CRUD, stockage JSON et validation.
+
+### Architecture de l'API
+
+L'API PHP microservice implémente:
+- **Router**: Gestion du routage des URL et parsing des requêtes
+- **ResponseHandler**: Réponses JSON cohérentes avec codes HTTP appropriés
+- **Task**: Entité avec validation (titre requis, statut enum)
+- **TaskRepository**: Opérations CRUD avec fichier JSON et verrouillage de fichier
+- **TaskController**: Logique métier pour chaque endpoint
+
+### Endpoints de l'API
+
+| Méthode | Endpoint | Description | Code |
+|---------|----------|-------------|------|
+| GET | `/api/health` | Health check | 200 |
+| GET | `/api/tasks` | Liste toutes les tâches | 200 |
+| GET | `/api/tasks/{id}` | Récupère une tâche spécifique | 200/404 |
+| POST | `/api/tasks` | Crée une nouvelle tâche | 201 |
+| PUT | `/api/tasks/{id}` | Met à jour une tâche | 200/404 |
+| DELETE | `/api/tasks/{id}` | Supprime une tâche | 204/404 |
+
+### Structure de l'entité Task
+
+```json
+{
+  "id": 1,
+  "title": "Titre de la tâche",
+  "description": "Description de la tâche",
+  "status": "pending",
+  "created_at": "2025-12-18T10:00:00+00:00",
+  "updated_at": "2025-12-18T10:00:00+00:00"
+}
+```
+
+**Statuts valides**: `pending`, `in_progress`, `completed`
+
+### Format des réponses
+
+**Succès:**
+```json
+{
+  "success": true,
+  "data": {...},
+  "message": "Task retrieved successfully"
+}
+```
+
+**Erreur:**
+```json
+{
+  "success": false,
+  "error": "Task not found",
+  "code": 404
+}
+```
+
+### Exemples d'utilisation avec cURL
+
+#### Health Check
+```bash
+curl http://localhost:8081/api/health
+```
+
+#### Lister toutes les tâches
+```bash
+curl http://localhost:8081/api/tasks
+```
+
+#### Récupérer une tâche spécifique
+```bash
+curl http://localhost:8081/api/tasks/1
+```
+
+#### Créer une nouvelle tâche
+```bash
+curl -X POST http://localhost:8081/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Apprendre PHP",
+    "description": "Maîtriser les APIs REST",
+    "status": "pending"
+  }'
+```
+
+#### Mettre à jour une tâche
+```bash
+curl -X PUT http://localhost:8081/api/tasks/1 \
+  -H "Content-Type: application/json" \
+  -d '{"status": "in_progress"}'
+```
+
+#### Supprimer une tâche
+```bash
+curl -X DELETE http://localhost:8081/api/tasks/1
+```
 
 ### Build et test du service PHP
 
+#### Option 1: Docker Compose (Recommandé)
+```bash
+# Construire et lancer tous les services
+docker-compose up -d
+
+# Voir les logs
+docker-compose logs -f php-service
+
+# Arrêter les services
+docker-compose down
+```
+
+#### Option 2: Docker standalone
 ```bash
 # Se placer dans le dossier php-service
 cd php-service
 
 # Construire l'image
-docker build -t php-name-service .
+docker build -t php-task-api .
 
-# Lancer le conteneur
-docker run -d -p 8081:80 --name php-service php-name-service
+# Lancer le conteneur avec volume pour persistance
+docker run -d -p 8081:80 --name php-service \
+  -v php-data:/var/www/html/data \
+  php-task-api
 
-# Tester
-curl http://localhost:8081
+# Tester l'API
+curl http://localhost:8081/api/health
 ```
 
 ### Publier l'image PHP sur Docker Hub
 
 ```bash
 # Tag l'image
-docker tag php-name-service <votre-username-dockerhub>/php-name-service:latest
+docker tag php-task-api <votre-username-dockerhub>/php-task-api:latest
 
 # Pousser l'image
-docker push <votre-username-dockerhub>/php-name-service:latest
+docker push <votre-username-dockerhub>/php-task-api:latest
 ```
+
+## Docker Compose - Orchestration des services
+
+Le fichier `docker-compose.yml` permet de gérer les deux services ensemble:
+
+```bash
+# Lancer tous les services
+docker-compose up -d
+
+# Voir l'état des services
+docker-compose ps
+
+# Voir les logs
+docker-compose logs -f
+
+# Arrêter tous les services
+docker-compose down
+
+# Reconstruire et relancer
+docker-compose up -d --build
+```
+
+### Services disponibles
+
+- **rental-service**: http://localhost:8080
+- **php-service**: http://localhost:8081
 
 ## Liens Docker Hub
 

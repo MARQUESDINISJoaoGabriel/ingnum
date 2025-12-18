@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Java Spring Boot Rental Service
+  rental-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rentalservice
+    ports:
+      - "8080:8080"
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PHP Task Microservice API
+  php-service:
+    build:
+      context: ./php-service
+      dockerfile: Dockerfile
+    container_name: php-service
+    ports:
+      - "8081:80"
+    volumes:
+      - php-data:/var/www/html/data
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=info
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Named volume for PHP service data persistence
+volumes:
+  php-data:
+    driver: local
+
+# Network for inter-service communication
+networks:
+  microservices-network:
+    driver: bridge
